@@ -37,9 +37,17 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
+    'restaurante_api',
     'api',
     'rest_framework',
+    'rest_framework_simplejwt'
 ]
+
+REST_FRAMEWORK = {
+    'DEFAULT_AUTHENTICATION_CLASSES': (
+        'rest_framework_simplejwt.authentication.JWTAuthentication',
+    )
+}
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
@@ -77,8 +85,12 @@ WSGI_APPLICATION = 'restaurante_api.wsgi.application'
 
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': BASE_DIR / 'db.sqlite3',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': 'database_restaurante',  # El nombre de tu base de datos en MySQL
+        'USER': 'amira',  # Tu usuario de MySQL
+        'PASSWORD': '2029',  # La contraseña de tu usuario MySQL
+        'HOST': '127.0.0.1',  # Si estás ejecutando MySQL localmente
+        'PORT': '3306',  # El puerto por defecto de MySQL
     }
 }
 

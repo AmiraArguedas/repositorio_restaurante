@@ -1,3 +1,198 @@
 from django.db import models
+from django.utils import timezone
 
-# Create your models here.
+
+#modelo ROLES - Evans
+class Roles(models.Model):
+    rol_creado = models.DateTimeField(auto_now_add=True)
+    rol_actualizado = models.DateTimeField(auto_now=True)
+    nombre_rol = models.CharField(max_length=50, unique=True)
+
+    def __str__(self):
+        return self.nombre_rol        
+
+# modelo de USUARIOS - Evans
+class Usuario(models.Model):
+    usuario_creado = models.DateTimeField(auto_now_add=True)
+    usuario_actualizado = models.DateTimeField(auto_now=True)
+    nombre = models.CharField(max_length=100)
+    apellido = models.CharField(max_length=100)
+    email = models.EmailField(max_length=100, unique=True)
+    contrasena = models.CharField(max_length=255)
+    telefono = models.CharField(max_length=20)
+    rol = models.ForeignKey(Roles, on_delete=models.CASCADE)
+  
+    def __str__(self):
+        return f'{self.nombre} ({self.email})'
+
+
+# modelo de CATEGORIA MENU - 
+class CategoriaMenu(models.Model):
+    categoria_creada = models.DateTimeField(auto_now_add=True)
+    categoria_actualizada = models.DateTimeField(auto_now=True)
+    nombre = models.CharField(max_length=100)
+    descripcion = models.TextField()
+
+    def __str__(self):
+        return self.nombre
+
+
+# modelo de MENU - Evans
+class Menu(models.Model):
+    menu_creado = models.DateTimeField(auto_now_add=True)
+    menu_actualizado = models.DateTimeField(auto_now=True)
+    nombre = models.CharField(max_length=100)
+    descripcion = models.TextField()
+    precio = models.DecimalField(max_digits=10, decimal_places=2)
+    disponibilidad = models.BooleanField(default=True)
+    id_categoria = models.ForeignKey(CategoriaMenu, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"{self.nombre} - ${self.precio}"
+
+
+# modelo de HISTORIAL ESTADOS - 
+
+class HistorialEstados(models.Model):   
+    historial_creado = models.DateTimeField(auto_now_add=True)
+    historial_actualizado = models.DateTimeField(auto_now=True)
+    ESTADO_PREPARACION = 'preparación'
+    ESTADO_ENVIADO = 'enviado'
+    ESTADO_ENTREGADO = 'entregado'
+
+    ESTADOS_CHOICES = [
+        (ESTADO_PREPARACION, 'Preparación'),
+        (ESTADO_ENVIADO, 'Enviado'),
+        (ESTADO_ENTREGADO, 'Entregado')
+    ]
+
+    estado = models.CharField(max_length=20, choices=ESTADOS_CHOICES, default=ESTADO_PREPARACION)
+    fecha_cambio = models.DateTimeField(default=timezone.now)
+    
+    def __str__(self):
+        return f"Historial {self.pk} - Estado {self.estado}"
+
+
+# modelo de PEDIDO - 
+class Pedido(models.Model):
+    pedido_creado = models.DateTimeField(auto_now_add=True)
+    pedido_actualizado = models.DateTimeField(auto_now=True)
+    fecha_pedido = models.DateTimeField(auto_now_add=True)
+    id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    id_estado = models.ForeignKey(HistorialEstados, on_delete=models.CASCADE)
+
+    def __str__(self):
+        return f"Pedido {self.pk} - Fecha {self.fecha_pedido}"
+
+    
+    
+class Promocion(models.Model):
+    promocion_creado = models.DateTimeField(auto_now_add=True)
+    promocion_actualizado = models.DateTimeField(auto_now=True)
+    nombre = models.CharField(max_length=100)
+    descripcion = models.TextField()
+    descuento = models.IntegerField()
+    fecha_vencimiento = models.DateTimeField()
+    id_menu = models.ForeignKey(Menu, on_delete=models.CASCADE) 
+
+    def __str__(self):
+        return f"Promoción {self.nombre} - {self.id_menu}"
+
+
+# modelo de DETALLE DE PEDIDO - BRAYAN
+class DetallePedido(models.Model):
+    detalle_pedido_creado = models.DateTimeField(auto_now_add=True)
+    detalle_pedido_actualizado = models.DateTimeField(auto_now=True)
+    cantidad = models.IntegerField()
+    subtotal = models.IntegerField()
+    iva = models.IntegerField()
+    total = models.IntegerField()
+    id_pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE)
+    id_menu = models.ForeignKey(Menu, on_delete=models.CASCADE)
+    factura = models.ForeignKey('Factura', on_delete=models.CASCADE, null=True, blank=True)
+
+    def __str__(self):
+        return f"Total: ${self.total}"
+
+
+
+class MetodoDePago(models.Model):
+    metodo_pago_creado = models.DateTimeField(auto_now_add=True)
+    metodo_pago_actualizado = models.DateTimeField(auto_now=True)
+    tipo_pago = models.CharField(max_length=50)  
+    fecha_compra = models.DateField()
+    total_compra = models.DecimalField(max_digits=10, decimal_places=2)
+
+
+    def __str__(self):
+        return self.tipo_pago
+        
+    
+class MesasEstado(models.Model):
+    estado_mesa_creado = models.DateTimeField(auto_now_add=True)
+    estado_mesa_actualizado = models.DateTimeField(auto_now=True)
+    nombre_estado = models.CharField(max_length=50) 
+
+    def __str__(self):
+        return self.nombre_estado
+    
+    
+# modelo de MESAS - Amira
+class Mesas(models.Model):
+    mesa_creada = models.DateTimeField(auto_now_add=True)
+    mesa_actualizada = models.DateTimeField(auto_now=True)
+    numero_mesa = models.IntegerField()
+    capacidad_mesa = models.IntegerField()
+    disponiblilidad_mesa = models.ForeignKey(MesasEstado, on_delete=models.CASCADE)
+   
+    def __str__(self):
+        return str(self.numero_mesa)
+    
+    
+class Reserva(models.Model):
+    reserva_creada = models.DateTimeField(auto_now_add=True)
+    reserva_actualizada = models.DateTimeField(auto_now=True)
+    id_usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    id_mesa = models.ForeignKey(Mesas, on_delete=models.CASCADE)
+    id_metodo_pago = models.ForeignKey(MetodoDePago, on_delete=models.CASCADE)
+    fecha_reserva = models.DateTimeField()
+
+    def __str__(self):
+        return f"Reserva {self.pk} por {self.id_usuario}"
+    
+    
+# modelo de NOTIFICACIONES - Amira
+class Notificaciones(models.Model):
+    notificacion_creada = models.DateTimeField(auto_now_add=True)
+    notificacion_actualizada = models.DateTimeField(auto_now=True)
+    mensaje = models.TextField()
+    leido = models.BooleanField()
+    id_usuario_notificaciones = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+   
+    def __str__(self):
+        return str(self.mensaje)
+    
+    
+# modelo de COMENTARIOS - Amira
+class Comentarios(models.Model):
+    comentario_creado = models.DateTimeField(auto_now_add=True)
+    comentario_actualizado = models.DateTimeField(auto_now=True)
+    comentario = models.TextField()
+    calificacion = models.IntegerField()
+    id_usuario_comentarios = models.ForeignKey(Usuario, on_delete=models.CASCADE)
+    id_menu_comentarios = models.ForeignKey(Menu, on_delete=models.CASCADE)
+   
+    def __str__(self):
+        return str(self.comentario)
+    
+    
+class Factura(models.Model):
+    fecha_emision = models.DateTimeField(auto_now_add=True) 
+    factura_actualizada = models.DateTimeField(auto_now=True)
+    total_factura = models.DecimalField(max_digits=10, decimal_places=2, default=0.0) 
+    usuario = models.ForeignKey(Usuario, on_delete=models.CASCADE) 
+    metodo_pago = models.ForeignKey(MetodoDePago, on_delete=models.CASCADE) 
+    mesa = models.ForeignKey(Mesas, on_delete=models.CASCADE)  
+
+    def __str__(self):
+        return f"Factura {self.pk} - Usuario {self.usuario.nombre} - Total {self.total_factura} - MetodoDePago {self.metodo_pago.tipo_pago}"
