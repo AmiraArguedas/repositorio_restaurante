@@ -1,5 +1,7 @@
 from rest_framework import serializers
 from django.utils import timezone
+from datetime import datetime
+import re
 from .models import Roles, Usuario, Menu, HistorialEstados, Pedido, Promocion, DetallePedido, CategoriaMenu, MetodoDePago, MesasEstado, Mesas, Reserva, Notificaciones, Comentarios, Factura
 
 
@@ -20,6 +22,7 @@ class RolesSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("El rol debe ser 'cliente' o 'administrador'.")
         return value
 
+
 # **************************************************** USUARIOS - Evans **********************************************
 class UsuarioSerializer(serializers.ModelSerializer):
     class Meta:
@@ -31,6 +34,9 @@ class UsuarioSerializer(serializers.ModelSerializer):
     def validate_nombre(self, value):
         if not value.strip():
             raise serializers.ValidationError("El nombre del usuario no puede estar vacío.")
+        
+        if not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$', value):
+            raise serializers.ValidationError("Este campo solo debe contener letras y espacios.")
         return value
     
     def validate_email(self, value):
@@ -43,6 +49,11 @@ class UsuarioSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("La contraseña debe tener al menos 8 caracteres.")
         if not any(char.isdigit() for char in value):
             raise serializers.ValidationError("La contraseña debe contener al menos un número.")
+        return value
+    
+    def validate_apellido(self, value):
+        if not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$', value):
+            raise serializers.ValidationError("Este campo solo debe contener letras y espacios.")
         return value
 
 # **************************************************** MENU - Evans **********************************************
@@ -59,6 +70,8 @@ class MenuSerializer(serializers.ModelSerializer):
             raise serializers.ValidationError("El nombre del menú no puede estar vacío.")
         if len(value) < 3:
             raise serializers.ValidationError("El nombre del menú debe tener al menos 3 caracteres.")
+        if not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$', value):
+            raise serializers.ValidationError("Este campo solo debe contener letras y espacios.")
         return value 
     
     def validate_precio(self, value):
@@ -69,6 +82,11 @@ class MenuSerializer(serializers.ModelSerializer):
     def validate_categoria(self, value):
         if not value.strip():
             raise serializers.ValidationError("La categoría no puede estar vacía.")
+        return value
+    
+    def validate_descripcion(self, value):
+        if not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$', value):
+            raise serializers.ValidationError("Este campo solo debe contener letras y espacios.")
         return value
 
 # ******************************************** HISTORIAL ESTADOS - Brayan *****************************************
@@ -125,40 +143,56 @@ class PromocionSerializer(serializers.ModelSerializer):
         return attrs
 
 # ******************************************** DETALLE PEDIDO - Brayan *****************************************
+
 class DetallePedidoSerializer(serializers.ModelSerializer):
     class Meta:
         model = DetallePedido
         fields = '__all__'
-        read_only_fields = ['detalle_pedido_creado', 'detalle_pedido_actualizado', 'iva', 'total']
-
-    def validate_cantidad(self, value):
-        if value <= 0:
-            raise serializers.ValidationError("La cantidad debe ser un número positivo.")
-        return value
-
-    def validate_subtotal(self, value):
-        if value < 0:
-            raise serializers.ValidationError("El subtotal no puede ser negativo.")
-        return value
+        read_only_fields = ['detalle_pedido_creado', 'detalle_pedido_actualizado', 'subtotal', 'iva', 'total']
 
     def validate(self, data):
+        cantidad = data.get('cantidad', 1)
+        id_menu = data.get('id_menu')
+        id_promocion = data.get('id_promocion')
+        menu = Menu.objects.get(id=id_menu.id)
+        subtotal = menu.precio * cantidad 
+
+        if id_promocion:
+            promocion = Promocion.objects.filter(id=id_promocion.id, fecha_vencimiento__gt=datetime.now()).first()
+            if promocion:
+                descuento = promocion.descuento / 100 
+                subtotal = subtotal * (1 - descuento)  
+            else:
+                raise serializers.ValidationError("La promoción no es válida o ha expirado.")
+
+        tasa_iva = 0.13
+        iva = round(subtotal * tasa_iva, 2)
+
+        total = round(subtotal + iva, 2)
+
+        data['subtotal'] = subtotal
+        data['iva'] = iva
+        data['total'] = total
         return data
 
     def create(self, validated_data):
-        iva_percentage = 0.13
-        subtotal = validated_data.get('subtotal', 0)
-        validated_data['iva'] = subtotal * iva_percentage
-        validated_data['total'] = subtotal + validated_data['iva']
-        
-        return super().create(validated_data)
+        return DetallePedido.objects.create(**validated_data)
 
     def update(self, instance, validated_data):
-        iva_percentage = 0.13
-        subtotal = validated_data.get('subtotal', instance.subtotal)
-        validated_data['iva'] = subtotal * iva_percentage
-        validated_data['total'] = subtotal + validated_data['iva']
+        instance.cantidad = validated_data.get('cantidad', instance.cantidad)
+        instance.id_pedido = validated_data.get('id_pedido', instance.id_pedido)
+        instance.id_menu = validated_data.get('id_menu', instance.id_menu)
+        instance.factura = validated_data.get('factura', instance.factura)
+        instance.id_promocion = validated_data.get('id_promocion', instance.id_promocion)
 
-        return super().update(instance, validated_data)
+        validated_data = self.validate(validated_data)
+        instance.subtotal = validated_data['subtotal']
+        instance.iva = validated_data['iva']
+        instance.total = validated_data['total']
+
+        instance.save()
+        return instance
+
         
        
 
@@ -175,6 +209,15 @@ class CategoriaMenuSerializer(serializers.ModelSerializer):
         def validate_nombre(self, value):
             if not value.strip():
                 raise serializers.ValidationError("El nombre no puede estar vacío.")
+   
+            if not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$', value):
+                raise serializers.ValidationError("Este campo solo debe contener letras y espacios.")
+            return value
+        
+        def validate_descripcion(self, value):
+            if not re.match(r'^[a-zA-ZáéíóúÁÉÍÓÚñÑ\s]+$', value):
+                raise serializers.ValidationError("Este campo solo debe contener letras y espacios.")
+            return value
 
 # ******************************************** METODO DE PAGO - Rachid *****************************************
 class MetodoDePagoSerializer(serializers.ModelSerializer):
@@ -198,7 +241,13 @@ class MetodoDePagoSerializer(serializers.ModelSerializer):
 class MesasEstadoSerializer(serializers.ModelSerializer):
     class Meta:
         model = MesasEstado
-        fields = '__all__'
+        fields = ['id', 'nombre_estado']
+    
+    def validate_estado(self, value):
+        if value not in ['disponible', 'reservada', 'Disponible', 'Reservada']:
+            raise serializers.ValidationError("El estado debe ser 'disponible' o 'reservada'.")
+        return value
+
 
 # validaciones 
 

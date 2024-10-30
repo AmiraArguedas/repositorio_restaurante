@@ -1,7 +1,6 @@
 from django.db import models
 from django.utils import timezone
 
-
 #modelo ROLES - Evans
 class Roles(models.Model):
     rol_creado = models.DateTimeField(auto_now_add=True)
@@ -107,9 +106,10 @@ class DetallePedido(models.Model):
     subtotal = models.IntegerField()
     iva = models.IntegerField()
     total = models.IntegerField()
-    id_pedido = models.ForeignKey(Pedido, on_delete=models.CASCADE)
-    id_menu = models.ForeignKey(Menu, on_delete=models.CASCADE)
+    id_pedido = models.ForeignKey('Pedido', on_delete=models.CASCADE)
+    id_menu = models.ForeignKey('Menu', on_delete=models.CASCADE)
     factura = models.ForeignKey('Factura', on_delete=models.CASCADE, null=True, blank=True)
+    id_promocion = models.ForeignKey('Promocion', on_delete=models.SET_NULL, null=True, blank=True)
 
     def __str__(self):
         return f"Total: ${self.total}"
@@ -129,9 +129,15 @@ class MetodoDePago(models.Model):
         
     
 class MesasEstado(models.Model):
+    ESTADO_CHOICES = [
+        ('disponible', 'Disponible'),
+        ('reservada', 'Reservada'),
+        ('Disponible', 'disponible'),
+        ('Reservada', 'reservada'),
+    ]
     estado_mesa_creado = models.DateTimeField(auto_now_add=True)
     estado_mesa_actualizado = models.DateTimeField(auto_now=True)
-    nombre_estado = models.CharField(max_length=50) 
+    nombre_estado = models.CharField(max_length=50, choices=ESTADO_CHOICES)
 
     def __str__(self):
         return self.nombre_estado

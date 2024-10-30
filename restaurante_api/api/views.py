@@ -7,13 +7,11 @@ from rest_framework.permissions import IsAuthenticated
 # **************************************************** ROLES - Evans **********************************************
 # ListCreate
 class RolesListCreate(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
     queryset = Roles.objects.all()
     serializer_class = RolesSerializer
 
 # Detail
 class RolesDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
     queryset = Roles.objects.all()
     serializer_class = RolesSerializer
     
@@ -32,7 +30,7 @@ class UsuarioListCreate(generics.ListCreateAPIView):
 
 # Detail
 class UsuarioDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = Usuario.objects.all()
     serializer_class = UsuarioSerializer
 
@@ -46,13 +44,13 @@ class UsuarioDetail(generics.RetrieveUpdateDestroyAPIView):
 # **************************************************** MENU - Evans **********************************************
 # ListCreate
 class MenuListCreate(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = Menu.objects.all()
     serializer_class = MenuSerializer
 
 # Detail
 class MenuDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = Menu.objects.all()
     serializer_class = MenuSerializer
 
@@ -66,13 +64,13 @@ class MenuDetail(generics.RetrieveUpdateDestroyAPIView):
 # ******************************************** HISTORIAL ESTADOS - Brayan *****************************************
 # ListCreate
 class HistorialEstadosListCreate(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = HistorialEstados.objects.all()
     serializer_class = HistorialEstadosSerializer
 
 # Detail
 class HistorialEstadosDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = HistorialEstados.objects.all()
     serializer_class = HistorialEstadosSerializer
     
@@ -92,7 +90,7 @@ class PedidoListCreate(generics.ListCreateAPIView):
 
 # Detail
 class PedidoDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = Pedido.objects.all()
     serializer_class = PedidoSerializer
     
@@ -100,26 +98,26 @@ class PedidoDetail(generics.RetrieveUpdateDestroyAPIView):
 # ************************************************** PROMOCION - Rachid *********************************************
 # ListCreate 
 class PromocionListCreate(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = Promocion.objects.all()
     serializer_class = PromocionSerializer
 
 # Detail
 class PromocionDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = Promocion.objects.all()
     serializer_class = PromocionSerializer
     
 # ******************************************** DETALLE PEDIDO - Brayan *****************************************
 # ListCreate  
 class DetallePedidoListCreate(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = DetallePedido.objects.all()
     serializer_class = DetallePedidoSerializer
 
 # Detail
 class DetallePedidoDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = DetallePedido.objects.all()
     serializer_class = DetallePedidoSerializer
     
@@ -133,14 +131,14 @@ class DetallePedidoDetail(generics.RetrieveUpdateDestroyAPIView):
 # ******************************************** CATEGORIA MENU - Brayan *****************************************
 # ListCreate    
 class CategoriaMenuListCreate(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = CategoriaMenu.objects.all()
     serializer_class = CategoriaMenuSerializer
 
 # Detail
 
 class CategoriaMenuDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = CategoriaMenu.objects.all()
     serializer_class = CategoriaMenuSerializer
 
@@ -154,14 +152,14 @@ class CategoriaMenuDetail(generics.RetrieveUpdateDestroyAPIView):
 # ******************************************** METODO DE PAGO - Rachid *****************************************
 # ListCreate    
 class MetodoDePagoListCreate(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = MetodoDePago.objects.all()
     serializer_class = MetodoDePagoSerializer
 
 # Detail
 
 class MetodoDePagoDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = MetodoDePago.objects.all()
     serializer_class = MetodoDePagoSerializer
 
@@ -174,15 +172,38 @@ class MetodoDePagoDetail(generics.RetrieveUpdateDestroyAPIView):
 # ***************************************** MESAS ESTADO - Amira y Rachid **************************************
 # ListCreate  
 class MesasEstadoListCreate(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = MesasEstado.objects.all()
     serializer_class = MesasEstadoSerializer
+    permission_classes = [IsAuthenticated]
+
+    def create(self, request, *args, **kwargs):
+        # Validación adicional para el campo 'estado'
+        nombre_estado = request.data.get('nombre_estado')
+        if nombre_estado not in ['disponible', 'reservada', 'Disponible', 'Reservada']:
+            return Response({'error': "El estado debe ser 'disponible' o 'reservada'"}, status=status.HTTP_400_BAD_REQUEST)
+        
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        self.perform_create(serializer)
+        return Response(serializer.data, status=status.HTTP_201_CREATED)
+    
 
 # Detail
 class MesasEstadoDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = MesasEstado.objects.all()
     serializer_class = MesasEstadoSerializer
+
+
+    def update(self, request, *args, **kwargs):
+        # Validación adicional en la actualización
+        estado = request.data.get('estado')
+        if estado and estado not in ['disponible', 'reservada']:
+            return Response({'error': "El estado debe ser 'disponible' o 'reservada'."}, status=status.HTTP_400_BAD_REQUEST)
+
+        return super().update(request, *args, **kwargs)
+
 
     def destroy(self, request, *args, **kwargs):
         instance = self.get_object()
@@ -192,13 +213,13 @@ class MesasEstadoDetail(generics.RetrieveUpdateDestroyAPIView):
 # **************************************************** MESAS - Amira **********************************************
 # ListCreate     
 class MesasListCreate(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = Mesas.objects.all()
     serializer_class = MesasSerializer
 
 # Detail
 class MesasDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = Mesas.objects.all()
     serializer_class = MesasSerializer
 
@@ -226,13 +247,13 @@ class ReservaDetail(generics.RetrieveUpdateDestroyAPIView):
 # ************************************************* Notificaciones - Amira ********************************************
 # ListCreate   
 class NotificacionesListCreate(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = Notificaciones.objects.all()
     serializer_class = NotificacionesSerializer
 
 # Detail
 class NotificacionesDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = Notificaciones.objects.all()
     serializer_class = NotificacionesSerializer
 
@@ -260,13 +281,13 @@ class ComentariosDetail(generics.RetrieveUpdateDestroyAPIView):
 # **************************************************** Factura - Evans **********************************************
 # ListCreate   
 class FacturaListCreate(generics.ListCreateAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = Factura.objects.all()
     serializer_class = FacturaSerializer
 
 # Detail
 class FacturaDetail(generics.RetrieveUpdateDestroyAPIView):
-    permission_classes = [IsAuthenticated]
+
     queryset = Factura.objects.all()
     serializer_class = FacturaSerializer
 
@@ -277,7 +298,7 @@ class FacturaDetail(generics.RetrieveUpdateDestroyAPIView):
 
 # ********************************************* Pedidos por Usuarios - Amira ****************************************
 class PedidoPorUsuario(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+
     serializer_class = PedidoSerializer
 
     def get_queryset(self):
@@ -286,7 +307,7 @@ class PedidoPorUsuario(generics.ListAPIView):
 
 # ********************************************* Comentarios por Usuarios - Amira ****************************************
 class ComentarioPorUsuario(generics.ListAPIView):
-    permission_classes = [IsAuthenticated]
+
     serializer_class = ComentariosSerializer
 
     def get_queryset(self):
